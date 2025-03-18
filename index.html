@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo dos Dados</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .game-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        .dice-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .die {
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .auto-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .win-condition {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
+            background-color: #e8f5e9;
+        }
+        .result.lose {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        .result.win {
+            border-left-color: #2196F3;
+            background-color: #e3f2fd;
+        }
+        .game-over {
+            text-align: center;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-top: 20px;
+            font-size: 18px;
+            display: none;
+        }
+        .win-message {
+            text-align: center;
+            font-weight: bold;
+            color: #2196F3;
+            margin-top: 20px;
+            font-size: 18px;
+            display: none;
+        }
+        .reset-btn {
+            background-color: #2196F3;
+        }
+        .auto-btn {
+            background-color: #FF9800;
+        }
+        .stop-btn {
+            background-color: #F44336;
+        }
+        .history {
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        .charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 60px;
+            margin-top: 20px;
+        }
+        .chart-wrapper {
+            height: 300px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Jogo dos Dados</h1>
+        
+        <div class="stats">
+            <div>
+                <p>Tickets: <span id="tickets">5</span></p>
+                <p>Round: <span id="round">0</span></p>
+            </div>
+            <div>
+                <p>Games Won: <span id="games-won">0</span></p>
+                <p>Games Lost: <span id="games-lost">0</span></p>
+            </div>
+        </div>
+        
+        <div class="dice-container">
+            <div class="die" id="die1">-</div>
+            <div class="die" id="die2">-</div>
+        </div>
+        
+        <div class="result" id="result-display">
+            Welcome to the game! You start with 5 tickets. Press "Roll Dice" to play.
+        </div>
+        
+        <div class="controls">
+            <button id="roll-btn">Roll Dice (1 ticket)</button>
+            <button id="reset-btn" class="reset-btn">Reset Game</button>
+        </div>
+        
+        <div class="auto-controls">
+            <label for="interval">Auto-play interval (ms):</label>
+            <input type="number" id="interval" min="10" value="1000">
+            <button id="auto-btn" class="auto-btn">Start Auto-play</button>
+            <button id="stop-btn" class="stop-btn" disabled>Stop</button>
+        </div>
+        
+        <div class="win-condition">
+            <input type="checkbox" id="win-condition-checkbox">
+            <label for="win-condition-checkbox">Enable win condition</label>
+            <input type="number" id="win-threshold" min="10" value="20">
+            <label for="win-threshold">tickets</label>
+        </div>
+        
+        <div class="game-over" id="game-over">
+            Game Over! You've used all your tickets.
+        </div>
+        
+        <div class="win-message" id="win-message">
+            Congratulations! You've reached the ticket threshold!
+        </div>
+        
+        <div class="history" id="history">
+            <strong>Game History:</strong>
+        </div>
+    </div>
+    
+    <div class="charts-container">
+        <div class="chart-wrapper">
+            <h2>Tickets per Round</h2>
+            <canvas id="tickets-chart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <h2>Games Won vs Lost</h2>
+            <canvas id="games-chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let tickets = 5;
+        let roundNumber = 0;
+        let gameActive = true;
+        let autoPlayInterval = null;
+        let ticketsHistory = [];
+        let gamesWon = 0;
+        let gamesLost = 0;
+        let winThreshold = 20;
+        let ticketsChart = null;
+        let gamesChart = null;
+        
+        // DOM elements
+        const ticketsDisplay = document.getElementById('tickets');
+        const roundDisplay = document.getElementById('round');
+        const gamesWonDisplay = document.getElementById('games-won');
+        const gamesLostDisplay = document.getElementById('games-lost');
+        const die1Display = document.getElementById('die1');
+        const die2Display = document.getElementById('die2');
+        const resultDisplay = document.getElementById('result-display');
+        const rollButton = document.getElementById('roll-btn');
+        const resetButton = document.getElementById('reset-btn');
+        const autoButton = document.getElementById('auto-btn');
+        const stopButton = document.getElementById('stop-btn');
+        const intervalInput = document.getElementById('interval');
+        const winConditionCheckbox = document.getElementById('win-condition-checkbox');
+        const winThresholdInput = document.getElementById('win-threshold');
+        const gameOverDisplay = document.getElementById('game-over');
+        const winMessageDisplay = document.getElementById('win-message');
+        const historyDisplay = document.getElementById('history');
+        
+        // Initialize charts
+        function initCharts() {
+            // Tickets per round chart
+            const ticketsCtx = document.getElementById('tickets-chart').getContext('2d');
+            ticketsChart = new Chart(ticketsCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tickets',
+                        data: [],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Games won vs lost chart
+            const gamesCtx = document.getElementById('games-chart').getContext('2d');
+            gamesChart = new Chart(gamesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Won', 'Lost'],
+                    datasets: [{
+                        label: 'Games',
+                        data: [0, 0],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(255, 99, 132, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update charts
+        function updateTicketsChart() {
+            ticketsChart.data.labels.push(roundNumber);
+            ticketsChart.data.datasets[0].data.push(tickets);
+            ticketsChart.update();
+        }
+        
+        function updateGamesChart() {
+            gamesChart.data.datasets[0].data = [gamesWon, gamesLost];
+            gamesChart.update();
+        }
+        
+        // Roll a d6 die
+        function rollDie() {
+            return Math.floor(Math.random() * 6) + 1;
+        }
+        
+        // Add an entry to the game history
+        function addToHistory(text) {
+            const entry = document.createElement('p');
+            entry.textContent = text;
+            historyDisplay.appendChild(entry);
+            historyDisplay.scrollTop = historyDisplay.scrollHeight;
+        }
+        
+        // Start auto-play
+        function startAutoPlay() {
+            if (autoPlayInterval) return; // Don't start if already running
+            
+            const interval = parseInt(intervalInput.value);
+            if (isNaN(interval) || interval < 10) {
+                alert("Please enter a valid interval (minimum 10ms)");
+                return;
+            }
+            
+            autoButton.disabled = true;
+            stopButton.disabled = false;
+            
+            addToHistory(`Starting auto-play with ${interval}ms interval`);
+            
+            autoPlayInterval = setInterval(() => {
+                if (gameActive) {
+                    playRound();
+                } else {
+                    stopAutoPlay();
+                }
+            }, interval);
+        }
+        
+        // Stop auto-play
+        function stopAutoPlay() {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+                
+                autoButton.disabled = false;
+                stopButton.disabled = true;
+                
+                addToHistory("Auto-play stopped");
+            }
+        }
+        
+        // Play one round of the game
+        function playRound() {
+            if (!gameActive) {
+                return;
+            }
+            
+            // Use a ticket
+            tickets--;
+            roundNumber++;
+            
+            // Roll dice
+            const die1 = rollDie();
+            const die2 = rollDie();
+            const difference = Math.abs(die1 - die2);
+            
+            // Update display
+            die1Display.textContent = die1;
+            die2Display.textContent = die2;
+            ticketsDisplay.textContent = tickets;
+            roundDisplay.textContent = roundNumber;
+            
+            // Calculate result
+            let resultText = "";
+            if (die1 > die2) {
+                const ticketsWon = 2 * difference;
+                tickets += ticketsWon;
+                ticketsDisplay.textContent = tickets;
+                
+                resultText = `You rolled ${die1} and ${die2}. First die is higher! You won ${ticketsWon} tickets!`;
+                resultDisplay.className = "result";
+                addToHistory(`Round ${roundNumber}: Won ${ticketsWon} tickets with rolls ${die1} and ${die2}`);
+            } else {
+                resultText = `You rolled ${die1} and ${die2}. No win this round.`;
+                resultDisplay.className = "result lose";
+                addToHistory(`Round ${roundNumber}: No win with rolls ${die1} and ${die2}`);
+            }
+            
+            resultDisplay.textContent = resultText;
+            
+            // Update tickets chart
+            updateTicketsChart();
+            
+            // Check win condition
+            if (winConditionCheckbox.checked && tickets >= winThreshold) {
+                winGame();
+                return;
+            }
+            
+            // Check if game should end
+            if (tickets <= 0) {
+                endGame();
+            }
+        }
+        
+        // End the game (loss)
+        function endGame() {
+            gameActive = false;
+            rollButton.disabled = true;
+            gameOverDisplay.style.display = "block";
+            addToHistory(`Game ended after ${roundNumber} rounds.`);
+            
+            // Stop auto-play if running
+            stopAutoPlay();
+            
+            // Update stats
+            if (winConditionCheckbox.checked) {
+              gamesLost++;
+              gamesLostDisplay.textContent = gamesLost;
+              updateGamesChart();
+            }
+        }
+        
+        // Win the game
+        function winGame() {
+            gameActive = false;
+            rollButton.disabled = true;
+            winMessageDisplay.style.display = "block";
+            addToHistory(`Game won after ${roundNumber} rounds with ${tickets} tickets!`);
+            resultDisplay.className = "result win";
+            
+            if (winConditionCheckbox.checked) {
+              gamesWon++;
+              gamesWonDisplay.textContent = gamesWon;
+              updateGamesChart();
+            }
+
+            // Stop auto-play if running
+            stopAutoPlay();
+        }
+
+        function resetGame() {
+            tickets = 5;
+            roundNumber = 0;
+            gameActive = true;
+            
+            ticketsDisplay.textContent = tickets;
+            roundDisplay.textContent = roundNumber;
+            die1Display.textContent = "-";
+            die2Display.textContent = "-";
+            resultDisplay.textContent = "Game reset! You have 5 tickets. Press \"Roll Dice\" to play.";
+            resultDisplay.className = "result";
+            gameOverDisplay.style.display = "none";
+            rollButton.disabled = false;
+            
+            // Clear history except for the title
+            while (historyDisplay.childNodes.length > 2) {
+                historyDisplay.removeChild(historyDisplay.lastChild);
+            }
+
+            ticketsChart.data.labels = [];
+            ticketsChart.data.datasets[0].data = [];
+            ticketsChart.update();
+
+            addToHistory("New game started!");
+        }
+
+        rollButton.addEventListener('click', playRound);
+        resetButton.addEventListener('click', resetGame);
+        autoButton.addEventListener('click', startAutoPlay);
+        stopButton.addEventListener('click', stopAutoPlay);
+
+        initCharts();
+    </script>
+</body>
